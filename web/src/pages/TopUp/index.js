@@ -43,7 +43,24 @@ const TopUp = () => {
     }
     window.open(topUpLink, '_blank');
   };
-
+  const openStripeLink = () => {
+    let userString = localStorage.getItem('user');
+    if (!userString) {
+      showError('未获取到用户信息');
+    }
+    let user = JSON.parse(userString)
+    let email = user.email;
+    if (!topUpLink) {
+      showError('超级管理员并未设置充值链接！');
+      return;
+    }
+    if (!user.email) {
+     showError('您未设置邮箱，无法充值');
+     return ;
+    }
+    let stripeLink = topUpLink+'?prefilled_email='+email;
+    window.open(stripeLink,'_blank');
+  }
   const getUserQuota = async ()=>{
     let res  = await API.get(`/api/user/self`);
     const {success, message, data} = res.data;
@@ -81,6 +98,9 @@ const TopUp = () => {
             />
             <Button color='green' onClick={openTopUpLink}>
               获取兑换码
+            </Button>
+            <Button color='blue' onClick={openStripeLink}>
+              Stripe充值
             </Button>
             <Button color='yellow' onClick={topUp} disabled={isSubmitting}>
                 {isSubmitting ? '兑换中...' : '兑换'}

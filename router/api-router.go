@@ -25,6 +25,8 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/oauth/wechat", middleware.CriticalRateLimit(), controller.WeChatAuth)
 		apiRouter.GET("/oauth/wechat/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), controller.WeChatBind)
 		apiRouter.GET("/oauth/email/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), controller.EmailBind)
+		//设置stripe的回调地址
+		apiRouter.POST("/stripe/callback", controller.StripeCallback)
 
 		userRoute := apiRouter.Group("/user")
 		{
@@ -97,6 +99,7 @@ func SetApiRouter(router *gin.Engine) {
 			redemptionRoute.PUT("/", controller.UpdateRedemption)
 			redemptionRoute.DELETE("/:id", controller.DeleteRedemption)
 		}
+
 		logRoute := apiRouter.Group("/log")
 		logRoute.GET("/", middleware.AdminAuth(), controller.GetAllLogs)
 		logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)

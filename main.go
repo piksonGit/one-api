@@ -3,9 +3,6 @@ package main
 import (
 	"embed"
 	"fmt"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
-	"github.com/gin-gonic/gin"
 	"one-api/common"
 	"one-api/controller"
 	"one-api/middleware"
@@ -13,6 +10,10 @@ import (
 	"one-api/router"
 	"os"
 	"strconv"
+
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
 )
 
 //go:embed web/build

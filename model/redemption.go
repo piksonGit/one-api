@@ -3,8 +3,10 @@ package model
 import (
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"one-api/common"
+
+	"github.com/stripe/stripe-go/v76/webhook"
+	"gorm.io/gorm"
 )
 
 type Redemption struct {
@@ -19,6 +21,42 @@ type Redemption struct {
 	Count        int    `json:"count" gorm:"-:all"` // only for api request
 }
 
+//从stripe收款之后，进行对接的逻辑。
+func ProcessStripPaymentIntentSucceeded(amount int64, userId int) (quota int, err error) {
+	if userId == 0 {
+		return 0, errors.New("user unavailable")
+	}
+	if amount <= 0 {
+		return 0, errors.New("amount error")
+	}
+	//设置美元和quota的比例，将美元换算成quota充值到账户当中去。
+	incrementQuota := (float64(amount) / 100 * common.QuotaPerUnit)
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&User{}).Where("id = ?", userId).Update("quota", gorm.Expr("quota + ?", incrementQuota)).Error
+		if err != nil {
+			return err
+		}
+		return err
+	})
+	RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过Stripe充值 %s", common.LogQuota(int(incrementQuota))))
+	return int(incrementQuota), nil
+}
+
+//验证是不是来自stripe的请求：
+func IsStripeWebhookValid(payload []byte, sigHeader string, StripeWebHookSecret string) bool {
+	fmt.Println("检查是否是来自stripe中...")
+	res, err := webhook.ConstructEventWithOptions(payload, sigHeader, StripeWebHookSecret, webhook.ConstructEventOptions{
+		IgnoreAPIVersionMismatch: true,
+	})
+	if err != nil {
+		fmt.Println("不是来自stripe")
+		fmt.Println(err)
+		fmt.Println(res)
+		return false
+	}
+	fmt.Println("是来自stripe")
+	return true
+}
 func GetAllRedemptions(startIdx int, num int) ([]*Redemption, error) {
 	var redemptions []*Redemption
 	var err error
@@ -40,7 +78,6 @@ func GetRedemptionById(id int) (*Redemption, error) {
 	err = DB.First(&redemption, "id = ?", id).Error
 	return &redemption, err
 }
-
 func Redeem(key string, userId int) (quota int, err error) {
 	if key == "" {
 		return 0, errors.New("未提供兑换码")

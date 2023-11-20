@@ -1,11 +1,17 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"one-api/common"
 	"one-api/model"
+	"os"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stripe/stripe-go/v76"
 )
 
 func GetAllRedemptions(c *gin.Context) {
@@ -29,6 +35,93 @@ func GetAllRedemptions(c *gin.Context) {
 	return
 }
 
+//处理用户
+func StripeCallback(c *gin.Context) {
+	//首先验证是不是stripe服务器发来的消息。
+	const StripeWebHookSecret = "whsec_3847e0d99d104f0ca2dfc1501b9840c07d2b48fed12efabf17e26b01daa2a22b"
+	payload, ioerr := ioutil.ReadAll(c.Request.Body)
+	sigHeader := c.GetHeader("Stripe-Signature")
+	if !model.IsStripeWebhookValid(payload, sigHeader, StripeWebHookSecret) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "the request seems not from stripe",
+		})
+		return
+	}
+	if ioerr != nil {
+		fmt.Println("读文件错误")
+		c.JSON(http.StatusOK, gin.H{
+			"sucess":  false,
+			"message": ioerr.Error(),
+		})
+		return
+	}
+	event := stripe.Event{}
+	if err := json.Unmarshal(payload, &event); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+
+		return
+	}
+	// err := json.NewDecoder(c.Request.Body).Decode(&event)
+	// if err != nil {
+	// 	fmt.Println("解析event错误")
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"success": false,
+	// 		"message": err.Error(),
+	// 	})
+	// 	return
+	// }
+	switch event.Type {
+	case "payment_intent.succeeded":
+		var paymentIntent stripe.PaymentIntent
+		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON:%v\n", err)
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		//处理付款逻辑
+		amount := paymentIntent.AmountReceived
+		//model.ProcessStripPaymentIntentSucceeded(amount, userId)
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": paymentIntent,
+			"amount":  amount,
+		})
+		return
+
+	case "checkout.session.completed":
+		var session stripe.CheckoutSession
+		err := json.Unmarshal(event.Data.Raw, &session)
+		//处理付款逻辑
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		amount := session.AmountTotal
+		email := session.CustomerDetails.Email
+		fmt.Println(email)
+		userId := model.GetUserIdByEmail(email)
+		fmt.Println(userId)
+		model.ProcessStripPaymentIntentSucceeded(amount, userId)
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "",
+			"amount":  amount,
+			"email":   email,
+		})
+		return
+	}
+}
 func SearchRedemptions(c *gin.Context) {
 	keyword := c.Query("keyword")
 	redemptions, err := model.SearchRedemptions(keyword)
@@ -39,6 +132,7 @@ func SearchRedemptions(c *gin.Context) {
 		})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

@@ -79,6 +79,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 		DisplayName: user.DisplayName,
 		Role:        user.Role,
 		Status:      user.Status,
+		Email:       user.Email,
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "",
