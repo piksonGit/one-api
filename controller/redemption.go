@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"one-api/common"
 	"one-api/model"
-	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -76,7 +75,7 @@ func StripeCallback(c *gin.Context) {
 	// }
 	switch event.Type {
 	case "payment_intent.succeeded":
-		var paymentIntent stripe.PaymentIntent
+		/* 	var paymentIntent stripe.PaymentIntent
 		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON:%v\n", err)
@@ -93,6 +92,10 @@ func StripeCallback(c *gin.Context) {
 			"success": true,
 			"message": paymentIntent,
 			"amount":  amount,
+		}) */
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "no need to handle",
 		})
 		return
 
@@ -120,7 +123,13 @@ func StripeCallback(c *gin.Context) {
 			"email":   email,
 		})
 		return
+	default:
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "no need to handle",
+		})
 	}
+
 }
 func SearchRedemptions(c *gin.Context) {
 	keyword := c.Query("keyword")
