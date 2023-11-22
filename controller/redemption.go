@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"one-api/common"
 	"one-api/model"
+	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -37,7 +38,7 @@ func GetAllRedemptions(c *gin.Context) {
 //处理用户
 func StripeCallback(c *gin.Context) {
 	//首先验证是不是stripe服务器发来的消息。
-	const StripeWebHookSecret = "whsec_3847e0d99d104f0ca2dfc1501b9840c07d2b48fed12efabf17e26b01daa2a22b"
+	var StripeWebHookSecret = os.Getenv("Stripe_Webhook_Secret")
 	payload, ioerr := ioutil.ReadAll(c.Request.Body)
 	sigHeader := c.GetHeader("Stripe-Signature")
 	if !model.IsStripeWebhookValid(payload, sigHeader, StripeWebHookSecret) {
