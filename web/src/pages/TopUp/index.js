@@ -46,16 +46,16 @@ const TopUp = () => {
   const openStripeLink = () => {
     let userString = localStorage.getItem('user');
     if (!userString) {
-      showError('未获取到用户信息');
+      showError('no user info');
     }
     let user = JSON.parse(userString)
     let email = user.email;
     if (!topUpLink) {
-      showError('超级管理员并未设置充值链接！');
+      showError('no charge link');
       return;
     }
     if (!user.email) {
-     showError('您未设置邮箱，无法充值');
+     showError('you have not set email address');
      return ;
     }
     let stripeLink = topUpLink+'?prefilled_email='+email;
