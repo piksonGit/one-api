@@ -44,12 +44,10 @@ func ProcessStripPaymentIntentSucceeded(amount int64, userId int) (quota int, er
 
 //验证是不是来自stripe的请求：
 func IsStripeWebhookValid(payload []byte, sigHeader string, StripeWebHookSecret string) bool {
-	fmt.Println("检查是否是来自stripe中...")
 	res, err := webhook.ConstructEventWithOptions(payload, sigHeader, StripeWebHookSecret, webhook.ConstructEventOptions{
 		IgnoreAPIVersionMismatch: true,
 	})
 	if err != nil {
-		fmt.Println("不是来自stripe")
 		fmt.Println(err)
 		fmt.Println(res)
 		return false

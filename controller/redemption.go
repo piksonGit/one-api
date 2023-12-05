@@ -65,35 +65,9 @@ func StripeCallback(c *gin.Context) {
 
 		return
 	}
-	// err := json.NewDecoder(c.Request.Body).Decode(&event)
-	// if err != nil {
-	// 	fmt.Println("解析event错误")
-	// 	c.JSON(http.StatusOK, gin.H{
-	// 		"success": false,
-	// 		"message": err.Error(),
-	// 	})
-	// 	return
-	// }
+	fmt.Println(event.Type)
 	switch event.Type {
 	case "payment_intent.succeeded":
-		/* 	var paymentIntent stripe.PaymentIntent
-		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON:%v\n", err)
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": err.Error(),
-			})
-			return
-		}
-		//处理付款逻辑
-		amount := paymentIntent.AmountReceived
-		//model.ProcessStripPaymentIntentSucceeded(amount, userId)
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": paymentIntent,
-			"amount":  amount,
-		}) */
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "no need to handle",
@@ -103,6 +77,18 @@ func StripeCallback(c *gin.Context) {
 	case "checkout.session.completed":
 		var session stripe.CheckoutSession
 		err := json.Unmarshal(event.Data.Raw, &session)
+		metadata := session.Metadata
+		product_name := metadata["product_name"]
+		fmt.Println(metadata)
+		fmt.Println(product_name)
+
+		if product_name != os.Getenv("PRODUCT_NAME") {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "not from apirouter",
+			})
+			return
+		}
 		//处理付款逻辑
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
@@ -113,8 +99,9 @@ func StripeCallback(c *gin.Context) {
 		}
 		amount := session.AmountTotal
 		email := session.CustomerDetails.Email
-		fmt.Println(email)
 		userId := model.GetUserIdByEmail(email)
+		fmt.Println(email)
+		fmt.Println(amount)
 		fmt.Println(userId)
 		model.ProcessStripPaymentIntentSucceeded(amount, userId)
 		c.JSON(http.StatusOK, gin.H{
